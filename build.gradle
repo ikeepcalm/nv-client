@@ -1,0 +1,74 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    // The NexusVeil plugin's :core jar. Publish it from that repository with
+    //     ./gradlew :core:publishToMavenLocal
+    // Nothing here is a copy of those classes, deliberately: see docs/CLIENT_MOD.md D-072.
+    mavenLocal()
+    maven {
+        name = 'TerraformersMC'
+        url = 'https://maven.terraformersmc.com/releases/'
+    }
+}
+
+loom {
+    mixin {
+        useLegacyMixinAp = false
+    }
+
+    mods {
+        "nexusveil-client" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    compileOnly "org.projectlombok:lombok:1.18.46"
+    annotationProcessor "org.projectlombok:lombok:1.18.46"
+    compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+    // Shipped inside the mod jar so a player installs one file. Its only dependency is JOML,
+    // which Minecraft already bundles, so nothing else rides along.
+    implementation(include("dev.ua.ikeepcalm:nexusveil-core:${project.nexusveil_core_version}")) {
+        transitive = false
+    }
+
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+test {
+    useJUnitPlatform()
+}
+
+processResources {
+    def version = project.version
+    inputs.property "version", version
+    filesMatching("fabric.mod.json") {
+        expand "version": version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 25
+    it.options.encoding = 'UTF-8'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}

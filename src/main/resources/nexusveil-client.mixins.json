@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.ua.ikeepcalm.nexusveil.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "EntityCollisionMixin",
+    "EntityGetterMixin",
+    "LithiumCollisionMixin",
+    "LivingEntityClimbMixin",
+    "LocalPlayerCarryMixin",
+    "MinecraftPickMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
