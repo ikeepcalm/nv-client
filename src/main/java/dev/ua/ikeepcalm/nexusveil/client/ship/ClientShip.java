@@ -34,6 +34,7 @@ public class ClientShip {
     private ShipPose previous;
     private ShipPose current = ShipPose.upright(ShipTransform.IDENTITY);
     private float roll;
+    private float bow;
     private boolean announced;
 
     public ClientShip(NvShipAdd identity) {
@@ -78,6 +79,7 @@ public class ClientShip {
 
     public void move(NvShipMove.Entry entry, long tick) {
         this.roll = entry.getRoll();
+        this.bow = entry.getBow();
         ShipPose pose = new ShipPose(new ShipTransform(entry.getOrigin(), entry.getYaw()),
                 entry.getRoll() * NvSettings.get().getHeelScale(), HullRoll.forward(entry.getBow()), entry.getRollCentre());
         if (!this.received.isEmpty() && tick <= this.received.peekLast().getTick()) {
@@ -131,6 +133,10 @@ public class ClientShip {
 
     public ShipTransform transform() {
         return this.current.getTransform();
+    }
+
+    public float bow() {
+        return this.bow;
     }
 
     public float roll() {

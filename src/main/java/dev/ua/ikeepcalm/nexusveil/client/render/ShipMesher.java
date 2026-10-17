@@ -2,6 +2,7 @@ package dev.ua.ikeepcalm.nexusveil.client.render;
 
 import com.mojang.blaze3d.vertex.VertexSorting;
 import dev.ua.ikeepcalm.nexusveil.core.math.Vec3d;
+import dev.ua.ikeepcalm.nexusveil.core.voxel.ShipLightField;
 import dev.ua.ikeepcalm.nexusveil.core.voxel.VoxelModel;
 import lombok.Data;
 import net.minecraft.client.Minecraft;
@@ -12,6 +13,8 @@ import net.minecraft.client.renderer.chunk.SectionCompiler;
 import net.minecraft.client.renderer.chunk.SectionCopy;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
@@ -69,6 +72,8 @@ public class ShipMesher {
         }
 
         Map<Long, LevelChunk> chunks = load(level, model, states, anchorX, anchorY, anchorZ);
+        ShipLightField light = lightField(model, states);
+        int[] anchor = {anchorX, anchorY, anchorZ};
         // One SectionCopy per section, not per neighbourhood: each duplicates a whole PalettedContainer.
         Map<Long, SectionCopy> copies = new HashMap<>();
 
@@ -79,7 +84,7 @@ public class ShipMesher {
                     SectionPos at = SectionPos.of(
                             (anchorX >> 4) + sx, (anchorY >> 4) + sy, (anchorZ >> 4) + sz);
                     tasks.add(new Task(sx * SECTION, sy * SECTION, sz * SECTION, at,
-                            region(level, chunks, copies, at)));
+                            region(level, chunks, copies, at, light, anchor, model)));
                 }
             }
         }
@@ -98,7 +103,8 @@ public class ShipMesher {
 
     // Neighbours outside the hull must be real air sections: an absent one stops the outer planking faces drawing.
     private RenderSectionRegion region(ClientLevel level, Map<Long, LevelChunk> chunks,
-                                       Map<Long, SectionCopy> copies, SectionPos centre) {
+                                       Map<Long, SectionCopy> copies, SectionPos centre,
+                                       ShipLightField light, int[] anchor, VoxelModel model) {
         SectionCopy[] sections = new SectionCopy[RenderSectionRegion.SIZE
                 * RenderSectionRegion.SIZE * RenderSectionRegion.SIZE];
         int minX = centre.x() - RenderSectionRegion.RADIUS;
@@ -117,7 +123,20 @@ public class ShipMesher {
                 }
             }
         }
-        return new RenderSectionRegion(level, minX, minY, minZ, sections);
+        return new ShipLitRegion(level, minX, minY, minZ, sections, light, anchor[0], anchor[1], anchor[2],
+                model.sizeX(), model.sizeY(), model.sizeZ());
+    }
+
+    // Same rule as the server's ShipLighting, so both paths light a hull alike: stair and slab roofs count as opaque or daylight leaks into cabins.
+    private static ShipLightField lightField(VoxelModel model, BlockState[] states) {
+        int[] emission = new int[states.length];
+        int[] opacity = new int[states.length];
+        for (int id = 1; id < states.length; id++) {
+            emission[id] = states[id].getLightEmission();
+            opacity[id] = states[id].getBlock() instanceof SlabBlock || states[id].getBlock() instanceof StairBlock
+                    ? 15 : states[id].getLightDampening();
+        }
+        return new ShipLightField(model, emission, opacity);
     }
 
     private SectionCopy copy(ClientLevel level, Map<Long, LevelChunk> chunks, int secX, int secY, int secZ) {

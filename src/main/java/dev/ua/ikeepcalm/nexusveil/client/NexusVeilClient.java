@@ -1,8 +1,11 @@
 package dev.ua.ikeepcalm.nexusveil.client;
 
 import dev.ua.ikeepcalm.nexusveil.client.config.NvSettings;
+import dev.ua.ikeepcalm.nexusveil.client.fx.ImpactFrame;
+import dev.ua.ikeepcalm.nexusveil.client.fx.Vfx;
 import dev.ua.ikeepcalm.nexusveil.client.net.NvNetworking;
 import dev.ua.ikeepcalm.nexusveil.client.render.ShipDrawPass;
+import dev.ua.ikeepcalm.nexusveil.client.render.ShipEffects;
 import dev.ua.ikeepcalm.nexusveil.client.render.ShipPick;
 import dev.ua.ikeepcalm.nexusveil.client.render.ShipRenderer;
 import dev.ua.ikeepcalm.nexusveil.client.ship.ClientFleet;
@@ -12,9 +15,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 public class NexusVeilClient implements ClientModInitializer {
 
@@ -31,6 +37,9 @@ public class NexusVeilClient implements ClientModInitializer {
         LevelRenderEvents.AFTER_OPAQUE_TERRAIN.register(context -> ShipDrawPass.draw(
                 context.levelState().cameraRenderState, ChunkSectionLayerGroup.OPAQUE));
         LevelRenderEvents.COLLECT_SUBMITS.register(ShipPick::draw);
+        LevelRenderEvents.COLLECT_SUBMITS.register(Vfx::draw);
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
+                Identifier.fromNamespaceAndPath(MOD_ID, "impact_frame"), ImpactFrame::render);
         LevelRenderEvents.BEFORE_TRANSLUCENT_TERRAIN.register(context -> ShipDrawPass.draw(
                 context.levelState().cameraRenderState, ChunkSectionLayerGroup.TRANSLUCENT));
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) ->
@@ -54,6 +63,7 @@ public class NexusVeilClient implements ClientModInitializer {
             return;
         }
         ShipRenderer.collect();
+        ShipEffects.tick(ClientFleet.all());
         for (ClientShip ship : ClientFleet.all()) {
             ShipRenderer.mesh(ship);
             // Gated on the renderer, not the mesh: an undrawable hull must not make the server stop drawing it.

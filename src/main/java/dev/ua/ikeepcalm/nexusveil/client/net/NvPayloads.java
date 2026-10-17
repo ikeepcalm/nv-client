@@ -57,4 +57,5 @@ public class NvPayloads {
     public static final CustomPacketPayload.Type<Raw> SHIP_EDIT = type(NvProtocol.SHIP_EDIT);
     public static final CustomPacketPayload.Type<Raw> SHIP_REMOVE = type(NvProtocol.SHIP_REMOVE);
     public static final CustomPacketPayload.Type<Raw> CORRECT = type(NvProtocol.CORRECT);
+    public static final CustomPacketPayload.Type<Raw> EFFECT = type(NvProtocol.EFFECT);
 }

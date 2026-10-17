@@ -2,7 +2,9 @@ package dev.ua.ikeepcalm.nexusveil.client.net;
 
 import dev.ua.ikeepcalm.nexusveil.client.NvLog;
 import dev.ua.ikeepcalm.nexusveil.client.config.NvSettings;
+import dev.ua.ikeepcalm.nexusveil.client.render.ShipEffects;
 import dev.ua.ikeepcalm.nexusveil.client.ship.ClientFleet;
+import dev.ua.ikeepcalm.nexusveil.core.net.NvEffect;
 import dev.ua.ikeepcalm.nexusveil.core.net.NvGeometry;
 import dev.ua.ikeepcalm.nexusveil.core.net.NvGeometryRequest;
 import dev.ua.ikeepcalm.nexusveil.core.net.NvHello;
@@ -48,12 +50,14 @@ public class NvNetworking {
         clientbound(NvPayloads.SHIP_EDIT);
         clientbound(NvPayloads.SHIP_REMOVE);
         clientbound(NvPayloads.CORRECT);
+        clientbound(NvPayloads.EFFECT);
 
         receive(NvPayloads.WELCOME, payload -> welcome(NvWelcome.decode(payload)));
         receive(NvPayloads.SHIP_ADD, payload -> ClientFleet.add(NvShipAdd.decode(payload)));
         receive(NvPayloads.SHIP_MOVE, payload -> ClientFleet.move(NvShipMove.decode(payload)));
         receive(NvPayloads.SHIP_REMOVE, payload -> ClientFleet.remove(NvShipRemove.decode(payload)));
         receive(NvPayloads.GEOMETRY, payload -> ClientFleet.geometry(NvGeometry.decode(payload)));
+        receive(NvPayloads.EFFECT, payload -> ShipEffects.play(NvEffect.decode(payload)));
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> hello());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> reset());

@@ -4,6 +4,7 @@ import dev.ua.ikeepcalm.nexusveil.client.NvLog;
 import dev.ua.ikeepcalm.nexusveil.client.collision.ShipCarry;
 import dev.ua.ikeepcalm.nexusveil.client.collision.ShipCollision;
 import dev.ua.ikeepcalm.nexusveil.client.net.NvNetworking;
+import dev.ua.ikeepcalm.nexusveil.client.render.ShipEffects;
 import dev.ua.ikeepcalm.nexusveil.client.render.ShipRenderer;
 import dev.ua.ikeepcalm.nexusveil.core.net.NvGeometry;
 import dev.ua.ikeepcalm.nexusveil.core.net.NvShipAdd;
@@ -62,6 +63,7 @@ public class ClientFleet {
     public static void remove(NvShipRemove removal) {
         ASSEMBLER.forget(removal.getHandle());
         ShipRenderer.forget(removal.getHandle());
+        ShipEffects.forget(removal.getHandle());
         ClientShip gone = SHIPS.remove(removal.getHandle());
         if (gone != null) {
             NvLog.LOG.info("Ship {} ({}) left the view: {}",
@@ -113,6 +115,7 @@ public class ClientFleet {
         ShipCarry.forget();
         ShipCollision.clearCache();
         ShipRenderer.clear();
+        ShipEffects.clear();
         ASSEMBLER.clear();
         SHIPS.clear();
         lastMoveTick = 0;
