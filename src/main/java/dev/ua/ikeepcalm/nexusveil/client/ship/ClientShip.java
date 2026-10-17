@@ -35,6 +35,7 @@ public class ClientShip {
     private ShipPose current = ShipPose.upright(ShipTransform.IDENTITY);
     private float roll;
     private float bow;
+    private NvShipMove.Entry lastMove;
     private boolean announced;
 
     public ClientShip(NvShipAdd identity) {
@@ -69,17 +70,24 @@ public class ClientShip {
         return this.model != null;
     }
 
-    public boolean takeAnnouncement() {
-        if (this.announced || !drawable()) {
+    // True when what the server believes about this hull must change; it starts out believing we draw nothing.
+    public boolean announce(boolean drawing) {
+        boolean wanted = drawing && drawable();
+        if (this.announced == wanted) {
             return false;
         }
-        this.announced = true;
+        this.announced = wanted;
         return true;
+    }
+
+    public boolean announced() {
+        return this.announced;
     }
 
     public void move(NvShipMove.Entry entry, long tick) {
         this.roll = entry.getRoll();
         this.bow = entry.getBow();
+        this.lastMove = entry;
         ShipPose pose = new ShipPose(new ShipTransform(entry.getOrigin(), entry.getYaw()),
                 entry.getRoll() * NvSettings.get().getHeelScale(), HullRoll.forward(entry.getBow()), entry.getRollCentre());
         if (!this.received.isEmpty() && tick <= this.received.peekLast().getTick()) {
@@ -133,6 +141,10 @@ public class ClientShip {
 
     public ShipTransform transform() {
         return this.current.getTransform();
+    }
+
+    public NvShipMove.Entry lastMove() {
+        return this.lastMove;
     }
 
     public float bow() {

@@ -6,6 +6,7 @@
   "client": [
     "EntityCollisionMixin",
     "EntityGetterMixin",
+    "FlashbackSnapshotMixin",
     "LithiumCollisionMixin",
     "LivingEntityClimbMixin",
     "LocalPlayerCarryMixin",

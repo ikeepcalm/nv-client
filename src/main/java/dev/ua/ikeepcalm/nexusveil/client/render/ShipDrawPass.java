@@ -50,7 +50,7 @@ public class ShipDrawPass {
     }
 
     public static void draw(CameraRenderState camera, ChunkSectionLayerGroup group) {
-        if (broken || ClientFleet.size() == 0) {
+        if (broken || ClientFleet.size() == 0 || Shaders.active()) {
             return;
         }
         try {

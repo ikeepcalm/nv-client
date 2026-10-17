@@ -2,6 +2,7 @@ package dev.ua.ikeepcalm.nexusveil.client.render;
 
 import dev.ua.ikeepcalm.nexusveil.client.NvLog;
 import dev.ua.ikeepcalm.nexusveil.client.ship.ClientShip;
+import net.minecraft.client.Minecraft;
 
 import lombok.Data;
 
@@ -18,6 +19,7 @@ public class ShipRenderer {
         private final ShipGpu gpu;
         private final int sections;
         private final int quads;
+        private final ShipQuads cpu;
     }
 
     private static final ShipMesher MESHER = new ShipMesher();
@@ -28,6 +30,7 @@ public class ShipRenderer {
             Thread.ofPlatform().daemon().name("nv-mesher").factory());
     private static final Map<Integer, Future<ShipMesh>> PENDING = new HashMap<>();
 
+    private static volatile boolean stale;
     private static volatile long prepareNanos;
     private static volatile long compileNanos;
     private static int meshed;
@@ -46,6 +49,13 @@ public class ShipRenderer {
             PENDING.put(ship.handle(), WORKER.submit(() -> {
                 long compiling = System.nanoTime();
                 ShipMesh mesh = MESHER.compile(job);
+                if (Shaders.installed()) {
+                    try {
+                        mesh.cpu(ShipQuads.of(mesh));
+                    } catch (RuntimeException e) {
+                        ShipShaderPass.fail("copying the mesh", e);
+                    }
+                }
                 compileNanos += System.nanoTime() - compiling;
                 return mesh;
             }));
@@ -54,7 +64,18 @@ public class ShipRenderer {
         }
     }
 
+    // Called from the reload listener; the rebuild waits for the reload to finish, or it would mesh against the old atlas.
+    public static void invalidate() {
+        stale = true;
+    }
+
     public static void collect() {
+        if (stale && Minecraft.getInstance().gui.overlay() == null) {
+            stale = false;
+            NvLog.LOG.info("Resources reloaded; rebuilding {} hull(s)", HULLS.size());
+            clear();
+            MESHER.reset();
+        }
         if (PENDING.isEmpty()) {
             return;
         }
@@ -66,8 +87,9 @@ public class ShipRenderer {
                 ShipMesh mesh = entry.getValue().get();
                 int sections = mesh.sectionCount();
                 int quads = mesh.quads();
+                ShipQuads copy = mesh.cpu();
                 HULLS.put(entry.getKey(), new Built(
-                        ShipGpu.upload(mesh, "nexusveil/hull" + entry.getKey()), sections, quads));
+                        ShipGpu.upload(mesh, "nexusveil/hull" + entry.getKey()), sections, quads, copy));
                 meshed++;
             } catch (Exception e) {
                 Throwable cause = e.getCause() == null ? e : e.getCause();
@@ -80,13 +102,14 @@ public class ShipRenderer {
     private static void fail(int handle, String name, Throwable e) {
         NvLog.LOG.error("Could not build hull {}", name, e);
         // Stored as an empty hull so it is not retried every tick; FAILURES tells it apart from a genuinely empty mesh.
-        HULLS.put(handle, new Built(new ShipGpu(), 0, 0));
+        HULLS.put(handle, new Built(new ShipGpu(), 0, 0, null));
         FAILURES.put(handle, e.getClass().getSimpleName()
                 + (e.getMessage() == null ? "" : ": " + e.getMessage()));
     }
 
+    // Null while the hull path stands down, which is what turns collision, carry and picking off with it.
     public static Built built(int handle) {
-        return HULLS.get(handle);
+        return available() ? HULLS.get(handle) : null;
     }
 
     public static String failure(int handle) {
@@ -161,6 +184,6 @@ public class ShipRenderer {
     }
 
     public static boolean available() {
-        return ShipDrawPass.usable();
+        return ShipDrawPass.usable() && (!Shaders.active() || ShipShaderPass.usable());
     }
 }

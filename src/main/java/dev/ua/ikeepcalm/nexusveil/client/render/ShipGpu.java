@@ -2,7 +2,6 @@ package dev.ua.ikeepcalm.nexusveil.client.render;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.MeshData;
 import dev.ua.ikeepcalm.nexusveil.client.NvLog;
 import lombok.Data;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
@@ -37,23 +36,17 @@ public class ShipGpu implements AutoCloseable {
         for (ShipMesh.Section section : mesh.sections()) {
             section.getLayers().forEach((layer, data) -> gpu.add(section, layer, data, name));
         }
-        mesh.close();
         return gpu;
     }
 
-    private void add(ShipMesh.Section section, ChunkSectionLayer layer, MeshData data, String name) {
-        MeshData.DrawState state = data.drawState();
-        // createBuffer refuses an empty source, and most sections have no translucent layer.
-        if (state.indexCount() == 0 || !data.vertexBuffer().hasRemaining()) {
-            return;
-        }
-        int size = data.vertexBuffer().remaining();
+    private void add(ShipMesh.Section section, ChunkSectionLayer layer, ShipMesh.Layer data, String name) {
+        int size = data.getVertices().remaining();
         GpuBuffer vertices = RenderSystem.getDevice().createBuffer(
-                () -> name + "/" + layer.label(), GpuBuffer.USAGE_VERTEX, data.vertexBuffer());
+                () -> name + "/" + layer.label(), GpuBuffer.USAGE_VERTEX, data.getVertices().duplicate());
 
         this.byLayer.computeIfAbsent(layer, ignored -> new ArrayList<>())
-                .add(new Piece(section.getLocalX(), section.getLocalY(), section.getLocalZ(), vertices, state.indexCount()));
-        this.maxIndexCount = Math.max(this.maxIndexCount, state.indexCount());
+                .add(new Piece(section.getLocalX(), section.getLocalY(), section.getLocalZ(), vertices, data.getIndexCount()));
+        this.maxIndexCount = Math.max(this.maxIndexCount, data.getIndexCount());
         this.bytes += size;
     }
 

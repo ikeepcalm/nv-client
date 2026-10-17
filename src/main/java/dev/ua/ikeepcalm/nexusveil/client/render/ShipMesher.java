@@ -46,6 +46,11 @@ public class ShipMesher {
     private SectionCompiler compiler;
     private LevelChunk air;
 
+    // The compiler holds the block models it was made with, and a resource reload replaces them and the atlas.
+    public void reset() {
+        this.compiler = null;
+    }
+
     public Job prepare(VoxelModel model, Vec3d worldOrigin) {
         Minecraft client = Minecraft.getInstance();
         ClientLevel level = client.level;
@@ -93,10 +98,16 @@ public class ShipMesher {
 
     public ShipMesh compile(Job job) {
         ShipMesh mesh = new ShipMesh();
+        // Read once: a resource reload may null the field on the main thread while this runs.
+        SectionCompiler compiler = this.compiler;
         for (Task task : job.getTasks()) {
-            SectionCompiler.Results results = this.compiler.compile(
+            SectionCompiler.Results results = compiler.compile(
                     task.getAt(), task.getRegion(), VertexSorting.DISTANCE_TO_ORIGIN, this.buffers);
-            mesh.add(task.getLocalX(), task.getLocalY(), task.getLocalZ(), results.renderedLayers);
+            try {
+                mesh.add(task.getLocalX(), task.getLocalY(), task.getLocalZ(), results.renderedLayers);
+            } finally {
+                results.release();
+            }
         }
         return mesh;
     }
